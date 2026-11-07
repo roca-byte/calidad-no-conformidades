@@ -1,5 +1,7 @@
 # Registro de No Conformidades
 
+[![QualityOS](https://img.shields.io/badge/QualityOS-calidad_en_planta-0f5c6e?style=flat-square)](https://github.com/roca-byte)
+
 Registro mensual de No Conformidades (NC) para Aseguramiento de Calidad. Es una PWA que funciona **100 % offline**, sin servidor ni backend: los datos quedan en el propio dispositivo (IndexedDB). Es una réplica local del `registro_nc` de QualityOS.
 
 ## Características
