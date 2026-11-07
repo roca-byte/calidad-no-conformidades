@@ -73,7 +73,7 @@ const BRAND = {
 };
 ```
 
-El logo es `logo.png`; si no carga, se muestra el nombre de `empresa` como texto.
+El repositorio no incluye logo. Para usar uno, agregar `logo.png` en la raíz (y sumarlo a `FILES` en `sw.js`); si no existe, la impresión no muestra imagen y la segunda hoja usa el nombre de `empresa` como texto.
 
 La lista de tipos de desvío (con su severidad sugerida) está en `TIPOS`, dentro de `js/app.js`.
 

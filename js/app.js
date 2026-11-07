@@ -367,7 +367,7 @@ function renderPrintAcciones() {
   }).join('') || '<tr><td colspan="10" style="text-align:center;color:#555;padding:12px">Sin NC registradas para este período</td></tr>';
   el.innerHTML = `
   <div class="pac-header">
-    <div class="pac-logo"><img src="logo.png" alt="${esc(BRAND.empresa)}" style="max-width:110px;max-height:46px;display:block"></div>
+    <div class="pac-logo"><img src="logo.png" alt="${esc(BRAND.empresa)}" onerror="this.replaceWith(document.createTextNode(this.alt))" style="max-width:110px;max-height:46px;display:block"></div>
     <div class="pac-title">
       <span class="pac-title-main">Registro de No Conformidades</span>
       <span class="pac-title-sub">Acciones Correctivas y Disposición — ${esc(BRAND.proceso)}</span>
