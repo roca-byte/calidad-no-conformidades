@@ -1,6 +1,6 @@
 // Service worker: cachea la app para que funcione offline durante el turno.
 // Al cambiar cualquier archivo, subí V para que el celular baje la versión nueva.
-const V = 7;
+const V = 10;
 const CACHE = 'nc_v' + V;
 const FILES = [
   './', './index.html', './style.css', './manifest.json', './brand.js',

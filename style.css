@@ -112,11 +112,12 @@ tr:nth-child(even) td { background: var(--surface2); }
 .btn-copy:hover { }
 .btn-clear { border-color:var(--warn); color:var(--warn); }
 .btn-clear:hover { background:var(--warn-bg); }
-#panel-codificacion { display:none; margin-bottom:10px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); padding:10px 16px; font-size:11px; }
+#panel-codificacion { display:none; margin-bottom:10px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); padding:10px 16px; font-size:12px; }
 #panel-codificacion .pcod-row { display:flex; gap:20px; flex-wrap:wrap; align-items:center; }
 #panel-codificacion .pcod-item { display:flex; gap:5px; align-items:baseline; }
-#panel-codificacion .pcod-label { color:var(--muted); font-weight:700; font-size:10px; white-space:nowrap; }
+#panel-codificacion .pcod-label { color:var(--muted); font-weight:700; font-size:11px; white-space:nowrap; }
 #panel-codificacion .pcod-val { color:var(--text); }
+#panel-codificacion #in-periodo { width:150px; border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:11px; font-family:inherit; background:var(--surface); color:var(--text); }
 #panel-codificacion .pcod-marca { display:flex; gap:20px; flex-wrap:wrap; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
 #panel-codificacion .pcod-empresa { flex:1; min-width:220px; }
 #panel-codificacion .pcod-empresa input { flex:1; min-width:160px; border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:11px; font-family:inherit; background:var(--surface); color:var(--text); }
@@ -124,7 +125,7 @@ tr:nth-child(even) td { background: var(--surface2); }
 #panel-codificacion .pcod-btn:hover { border-color:var(--accent); }
 #panel-codificacion #marca-logo-prev { max-height:40px; max-width:110px; width:auto; object-fit:contain; background:#fff; border:1px solid var(--border); border-radius:4px; padding:3px; }
 #panel-codificacion #marca-logo-prev[hidden] { display:none; }
-#panel-codificacion .pcod-hint { margin-top:6px; color:var(--muted); font-size:10px; }
+#panel-codificacion .pcod-hint { margin-top:6px; color:var(--muted); font-size:11px; }
 @media print { #panel-codificacion { display:none !important; } }
 
 select, input[type="text"], input[type="date"], input[type="number"] {
@@ -155,7 +156,7 @@ select:focus, input:focus { outline:1.5px solid var(--accent); border-radius:2px
 @media (max-width: 540px) {
   .topbar-vsep, .topbar-title { display: none; }
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   body { padding: 62px 8px 8px; font-size: 14px; background: var(--bg); color: var(--text); }
   .page { background: var(--surface); box-shadow: none; padding: 12px; border-radius: 12px; max-width: 100%; }
 
@@ -473,7 +474,7 @@ select:focus, input:focus { outline:1.5px solid var(--accent); border-radius:2px
 tr.anulada td{opacity:.5}
 tr.anulada td.c0{text-decoration:line-through}
 .save-bar{flex-wrap:wrap}
-@media (max-width:900px){
+@media (max-width:1100px){
   .toolbar{padding:8px}
   .toolbar-row{gap:6px}
   .toolbar .btn,.toolbar select.btn{flex:1 1 44%;justify-content:center;padding:.55rem .6rem;font-size:.8rem}
@@ -486,3 +487,65 @@ tr.anulada td.c0{text-decoration:line-through}
 
 .legend-row strong{display:inline;margin:0}
 .toolbar select{width:auto}
+
+/* ══ TABLET / PANTALLAS TÁCTILES — controles cómodos para el dedo ══ */
+@media (pointer: coarse), (max-width: 1100px) {
+  body { font-size: 14px; }
+  .btn,
+  .toolbar select.btn {
+    min-height: 44px;
+    padding: .55rem .8rem;
+    font-size: .875rem;
+  }
+  .btn-t {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    font-size: .75rem;
+  }
+  .toolbar .btn,
+  .toolbar select.btn {
+    flex: 1 1 44%;
+    justify-content: center;
+  }
+  .kpi-label, .kpi-sub { font-size: 12px; }
+  .sev-box { font-size: 12px; }
+  .save-bar { font-size: 12px; }
+  .badge { font-size: 10.5px; }
+  /* Tabla (tablet horizontal): campos más altos y legibles */
+  #tBody td input,
+  #tBody td select {
+    min-height: 34px;
+    padding: 4px 5px;
+    font-size: 12.5px;
+  }
+  /* Vista de tarjetas (celular / tablet vertical) */
+  #tBody td[data-label] input,
+  #tBody td[data-label] select {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 15px;
+  }
+  #tBody td[data-label]::before { font-size: 11px; }
+  /* Panel de codificación */
+  #panel-codificacion { font-size: 13px; }
+  #panel-codificacion .pcod-label,
+  #panel-codificacion .pcod-hint { font-size: 12px; }
+  #panel-codificacion #in-periodo {
+    min-height: 40px;
+    width: 100%;
+    max-width: 220px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  #panel-codificacion .pcod-empresa input {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  #panel-codificacion .pcod-btn {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}

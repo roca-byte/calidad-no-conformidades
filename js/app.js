@@ -36,7 +36,7 @@ const SEV_ICON = { Leve: '🟢', Moderado: '🟡', 'Crítico': '🔴' };
 
 let rows = [];
 let _cardExpanded = null;   // celular: qué tarjetas están abiertas (por índice de fila)
-const esMovil = () => innerWidth <= 900;
+const esMovil = () => innerWidth <= 1100;
 
 // ── Fechas ──────────────────────────────────
 const p2 = n => String(n).padStart(2, '0');
@@ -190,7 +190,7 @@ function render() {
       else {
         const btn = document.createElement('button');
         btn.textContent = '⊘'; btn.title = 'Anular NC'; btn.setAttribute('aria-label', 'Anular NC');
-        btn.setAttribute('style', 'background:none;border:none;color:#f59e0b;font-size:18px;padding:0 8px;cursor:pointer;line-height:1');
+        btn.setAttribute('style', 'background:none;border:none;color:#f59e0b;font-size:18px;padding:6px 10px;cursor:pointer;line-height:1;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;');
         btn.addEventListener('click', e => { e.stopPropagation(); anular(i); });
         hdr.appendChild(btn);
       }

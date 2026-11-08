@@ -4,6 +4,8 @@
 
 Registro mensual de No Conformidades (NC) para Aseguramiento de Calidad. Es una PWA que funciona **100 % offline**, sin servidor ni backend: los datos quedan en el propio dispositivo (IndexedDB). Es una réplica local del `registro_nc` de QualityOS.
 
+**App publicada:** https://roca-byte.github.io/calidad-no-conformidades/
+
 ## Características
 
 - **Registro tipo planilla**: una fila por NC (fecha, lote, cliente, producto, tipo de desvío, severidad, detección, descripción, litros NC / totales, acción correctiva, plazo, estado, cierre, pallets, responsable y eficacia).
@@ -17,10 +19,11 @@ Registro mensual de No Conformidades (NC) para Aseguramiento de Calidad. Es una 
   - AQ-IND-04: % de reprocesos finalizados dentro de plazo
   - Contadores por severidad
 - **Imprimir / PDF** con encabezado de empresa, código y versión del registro, más una segunda hoja con las acciones.
+- **Empresa y logo configurables** desde el panel **⚙️ Codificación**: se guardan en el dispositivo y se usan en las dos hojas de impresión (si hay logo, reemplaza al nombre).
 - **Descargar Excel** (.xlsx) del período.
 - **Backup manual** en `.json` (exportar/importar). También importa fichas de la Fase 1.
 - **Quitar duplicados** y **borrar todo**.
-- **Tema claro/oscuro** y diseño responsive (tarjetas en móvil).
+- **Tema claro/oscuro** y diseño responsive (tarjetas en celular y tablet).
 - **Instalable** en el celular/PC y usable sin conexión gracias al service worker.
 
 ## Tecnologías
@@ -39,6 +42,7 @@ HTML + CSS + JavaScript vanilla, sin build ni dependencias de Node.
 ├── js/
 │   ├── app.js          # Lógica de la app, KPIs, impresión, Excel
 │   ├── db.js           # Capa de datos (IndexedDB)
+│   ├── marca.js        # Empresa y logo configurables (Marca)
 │   └── backup.js       # Exportar/importar backup .json
 ├── vendor/
 │   └── xlsx.full.min.js
@@ -60,11 +64,13 @@ También se puede publicar en cualquier hosting estático (GitHub Pages, Netlify
 
 ## Configuración
 
-Los datos de la empresa y del registro se editan en `brand.js`:
+La empresa y el logo se cargan desde la app, en el panel **⚙️ Codificación**. Quedan guardados solo en el dispositivo y se usan en las dos hojas de impresión: si hay logo, se muestra el logo; si no, el nombre de la empresa.
+
+Los valores de `brand.js` quedan como respaldo cuando la configuración está vacía:
 
 ```js
 const BRAND = {
-  empresa: 'QUALITYOS',
+  empresa: 'Empresa S.A.',
   codigo: 'SGC-RNC-01',
   version: '02',
   area: 'Aseg. Calidad',
@@ -74,8 +80,6 @@ const BRAND = {
   plazoDias: 5   // días hábiles para el plazo de reproceso automático
 };
 ```
-
-El repositorio no incluye logo. Para usar uno, agregar `logo.png` en la raíz (y sumarlo a `FILES` en `sw.js`); si no existe, la impresión no muestra imagen y la segunda hoja usa el nombre de `empresa` como texto.
 
 La lista de tipos de desvío (con su severidad sugerida) está en `TIPOS`, dentro de `js/app.js`.
 
