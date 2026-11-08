@@ -349,7 +349,7 @@ function pintarEncabezados() {
   set('pc-codigo', BRAND.codigo); set('pc-version', BRAND.version); set('pc-area', BRAND.area);
   set('pc-elaboro', BRAND.elaboro); set('pc-aprobo', BRAND.aprobo); set('pc-proceso', BRAND.proceso);
   $('in-periodo').value = (() => { try { return localStorage.getItem('nc_periodo') || ''; } catch (e) { return ''; } })();
-  $('brand').innerHTML = `<span class="q-mark" aria-hidden="true"><img src="qualityos.svg" alt=""></span>`;
+  $('brand').innerHTML = `<span class="q-mark" aria-hidden="true"><img src="qualityos.svg" alt=""></span><span class="brand-nombre">Registro de No Conformidades</span>`;
 }
 
 // Segunda hoja de impresión: Acciones Correctivas / Disposición (solo NC no anuladas, con su N° original)
