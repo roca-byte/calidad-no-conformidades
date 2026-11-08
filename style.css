@@ -117,6 +117,14 @@ tr:nth-child(even) td { background: var(--surface2); }
 #panel-codificacion .pcod-item { display:flex; gap:5px; align-items:baseline; }
 #panel-codificacion .pcod-label { color:var(--muted); font-weight:700; font-size:10px; white-space:nowrap; }
 #panel-codificacion .pcod-val { color:var(--text); }
+#panel-codificacion .pcod-marca { display:flex; gap:20px; flex-wrap:wrap; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+#panel-codificacion .pcod-empresa { flex:1; min-width:220px; }
+#panel-codificacion .pcod-empresa input { flex:1; min-width:160px; border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:11px; font-family:inherit; background:var(--surface); color:var(--text); }
+#panel-codificacion .pcod-btn { border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:4px; padding:4px 8px; font-size:10px; cursor:pointer; font-family:inherit; }
+#panel-codificacion .pcod-btn:hover { border-color:var(--accent); }
+#panel-codificacion #marca-logo-prev { max-height:40px; max-width:110px; width:auto; object-fit:contain; background:#fff; border:1px solid var(--border); border-radius:4px; padding:3px; }
+#panel-codificacion #marca-logo-prev[hidden] { display:none; }
+#panel-codificacion .pcod-hint { margin-top:6px; color:var(--muted); font-size:10px; }
 @media print { #panel-codificacion { display:none !important; } }
 
 select, input[type="text"], input[type="date"], input[type="number"] {
@@ -306,6 +314,9 @@ select:focus, input:focus { outline:1.5px solid var(--accent); border-radius:2px
     padding:10px 16px !important;
     background:#fff !important;
   }
+  #print-marca { display:flex; align-items:center; justify-content:center; width:100%; }
+  #print-marca img { display:block; height:60px; max-width:160px; width:auto; object-fit:contain; }
+  #print-marca .print-empresa { font-weight:800; font-size:13px; color:#0f5c6e; text-align:center; line-height:1.2; }
   #doc-header-print .print-title {
     flex:1 !important;
     display:flex !important;
@@ -384,6 +395,7 @@ select:focus, input:focus { outline:1.5px solid var(--accent); border-radius:2px
     background: #eef3f3 !important; padding: 6px;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
+  #print-acciones .pac-logo img { max-width:110px; max-height:46px; display:block; }
   #print-acciones .pac-title {
     flex: 1; display: flex !important; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; padding: 4px;

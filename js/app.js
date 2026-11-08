@@ -341,6 +341,11 @@ function periodo() {
   const h = new Date();
   return guardado || MESES[h.getMonth()] + ' ' + h.getFullYear();
 }
+function htmlMarca() {
+  return BRAND.logo
+    ? `<img src="${esc(BRAND.logo)}" alt="${esc(BRAND.empresa)}">`
+    : `<span class="print-empresa">${esc(BRAND.empresa)}</span>`;
+}
 function pintarEncabezados() {
   const set = (id, v) => { $(id).textContent = v; };
   set('ph-proceso', 'Proceso: ' + BRAND.proceso);
@@ -350,6 +355,22 @@ function pintarEncabezados() {
   set('pc-elaboro', BRAND.elaboro); set('pc-aprobo', BRAND.aprobo); set('pc-proceso', BRAND.proceso);
   $('in-periodo').value = (() => { try { return localStorage.getItem('nc_periodo') || ''; } catch (e) { return ''; } })();
   $('brand').innerHTML = `<span class="q-mark" aria-hidden="true"><img src="qualityos.svg" alt=""></span><span class="brand-nombre">Registro de No Conformidades</span>`;
+  // Encabezado impreso: logo si hay, si no el nombre de la empresa.
+  const printMarca = $('print-marca');
+  if (printMarca) printMarca.innerHTML = htmlMarca();
+  // Mantener sincronizado el panel de configuración.
+  if (typeof Marca !== 'undefined') {
+    const emp = $('in-empresa');
+    if (emp && document.activeElement !== emp) emp.value = Marca.datos.empresa || '';
+    const prev = $('marca-logo-prev');
+    if (prev) {
+      const tieneLogo = !!(Marca.datos.logo && Marca.datos.logo.d);
+      prev.hidden = !tieneLogo;
+      if (tieneLogo) prev.src = Marca.datos.logo.d;
+      $('marca-logo-txt').textContent = tieneLogo ? 'Cambiar logo' : 'Elegir logo';
+      $('btn-logo-quitar').hidden = !tieneLogo;
+    }
+  }
 }
 
 // Segunda hoja de impresión: Acciones Correctivas / Disposición (solo NC no anuladas, con su N° original)
@@ -367,7 +388,7 @@ function renderPrintAcciones() {
   }).join('') || '<tr><td colspan="10" style="text-align:center;color:#555;padding:12px">Sin NC registradas para este período</td></tr>';
   el.innerHTML = `
   <div class="pac-header">
-    <div class="pac-logo"><img src="logo.png" alt="${esc(BRAND.empresa)}" onerror="this.replaceWith(document.createTextNode(this.alt))" style="max-width:110px;max-height:46px;display:block"></div>
+    <div class="pac-logo">${htmlMarca()}</div>
     <div class="pac-title">
       <span class="pac-title-main">Registro de No Conformidades</span>
       <span class="pac-title-sub">Acciones Correctivas y Disposición — ${esc(BRAND.proceso)}</span>
@@ -528,6 +549,29 @@ $('btn-cod').addEventListener('click', () => { const p = $('panel-codificacion')
 $('btn-importar').addEventListener('click', importarDesdeReg01);
 $('btn-descartar').addEventListener('click', descartarImport);
 $('in-periodo').addEventListener('input', e => { try { localStorage.setItem('nc_periodo', e.target.value.trim()); } catch (err) { } pintarEncabezados(); renderPrintAcciones(); });
+// Empresa y logo: se guardan en el dispositivo y se aplican a las impresiones.
+$('in-empresa').addEventListener('input', e => {
+  Marca.datos.empresa = e.target.value;
+  Marca.guardar(); Marca.aplicar();
+  pintarEncabezados(); renderPrintAcciones();
+});
+$('btn-logo').addEventListener('click', () => $('in-logo').click());
+$('in-logo').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  Marca.leerLogo(f, logo => {
+    if (!logo) { toast('⚠ No se pudo leer esa imagen.'); return; }
+    Marca.datos.logo = logo;
+    if (Marca.guardar()) { Marca.aplicar(); pintarEncabezados(); renderPrintAcciones(); toast('🖼️ Logo guardado'); }
+    else toast('⚠ No hay espacio para guardar el logo. Probá con uno más chico.');
+  });
+});
+$('btn-logo-quitar').addEventListener('click', () => {
+  Marca.datos.logo = null;
+  Marca.guardar(); Marca.aplicar();
+  pintarEncabezados(); renderPrintAcciones();
+  toast('Logo quitado');
+});
 // Cambio de orientación / tamaño: pasar de tabla a tarjetas
 let _modoMovil = esMovil();
 addEventListener('resize', () => { if (esMovil() !== _modoMovil) { _modoMovil = esMovil(); _cardExpanded = null; render(); } });
