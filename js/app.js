@@ -1,31 +1,14 @@
-// app.js — registro mensual de No Conformidades (réplica local del registro_nc de QualityOS).
+// app.js — registro de No Conformidades: se carga todos los días y se entrega por mes.
 // Todo vive en el dispositivo: filas en IndexedDB (db.js), respaldo manual en .json (backup.js).
+// Las reglas (meses, indicadores, desvíos de QualityOS) están en reglas.js; acá solo la pantalla.
 // Tabla en pantallas grandes, tarjetas colapsables en el celular. Imprime A4 horizontal en dos hojas.
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ════════════════════════════════════════════
 // CONSTANTES
-// TIPOS: tipos de desvío con la gravedad sugerida (autocompleta la gravedad al elegirlos)
 // ════════════════════════════════════════════
-const TIPOS = [
-  { label: '', sev: '' },
-  { label: 'Poco film', sev: 'Leve' },
-  { label: 'Falta de enfilmado final', sev: 'Crítico' },
-  { label: 'Bidones abollados', sev: 'Crítico' },
-  { label: 'Inducción débil', sev: 'Crítico' },
-  { label: 'Bidón/es por inducción', sev: 'Moderado' },
-  { label: 'Tapas incorrectas', sev: 'Crítico' },
-  { label: 'Packaging incorrecto', sev: 'Moderado' },
-  { label: 'Paletizado incorrecto', sev: 'Moderado' },
-  { label: 'Palét incorrecto', sev: 'Moderado' },
-  { label: 'Trazabilidad / QR', sev: 'Crítico' },
-  { label: 'Identificación de palét', sev: 'Moderado' },
-  { label: 'Peso / Volumen', sev: 'Leve' },
-  { label: 'Palét chocado', sev: 'Moderado' },
-  { label: 'Pérdida (bidón/es pinchados)', sev: 'Crítico' },
-];
-const SEVS = ['', 'Leve', 'Moderado', 'Crítico'];
+const SEVS = ['', ...Reglas.SEVS];
 const ESTADOS = ['Pendiente', 'En proceso', 'Finalizado', 'Anulado'];
 const EFICACIA = ['Pendiente', 'Eficaz', 'No eficaz'];
 const DETEC = ['', 'CONTROL LÍNEA', 'CONTROL FINAL', 'CONTROL INGRESO'];
@@ -33,29 +16,24 @@ const BADGES = { Pendiente: 'b-pend', 'En proceso': 'b-proc', Finalizado: 'b-fin
 const EF_BADGES = { Pendiente: 'b-efpend', Eficaz: 'b-efok', 'No eficaz': 'b-efno' };
 const SEV_CLS = { Leve: 'sb-leve', Moderado: 'sb-mod', 'Crítico': 'sb-crit' };
 const SEV_ICON = { Leve: '🟢', Moderado: '🟡', 'Crítico': '🔴' };
+const { isoToDMY, fmtDate, toISO, sumarHabiles, firma, tieneContenido } = Reglas;
 
 let rows = [];
 let _cardExpanded = null;   // celular: qué tarjetas están abiertas (por índice de fila)
 const esMovil = () => innerWidth <= 1100;
 
-// ── Fechas ──────────────────────────────────
-const p2 = n => String(n).padStart(2, '0');
-const isoToDMY = iso => { const [y, m, d] = (iso || '').split('-'); return y && m && d ? `${d}/${m}/${y}` : ''; };
-const fmtDate = iso => { const [y, m, d] = (iso || '').split('-'); return y && m && d ? `${d}/${m}/${y.slice(2)}` : ''; };   // DD/MM/YY (impresión)
-// dd/mm/aaaa (o dd/mm/aa) → aaaa-mm-dd; si ya viene en ISO lo deja
-function toISO(s) {
-  s = (s || '').trim();
-  if (!s) return '';
-  if (s.includes('/')) { const p = s.split('/'); return p.length === 3 ? `${p[2].length === 2 ? '20' + p[2] : p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}` : ''; }
-  return s;
-}
-// Suma días hábiles en hora local (evita el corrimiento de un día que da new Date('aaaa-mm-dd') en UTC).
-function sumarHabiles(iso, n) {
-  const [y, m, d] = iso.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  for (let a = 0; a < n;) { dt.setDate(dt.getDate() + 1); if (dt.getDay() !== 0 && dt.getDay() !== 6) a++; }
-  return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
-}
+// Qué se ve: un mes ('aaaa-mm') o 'abiertas' (pendientes y en proceso de todos los meses).
+// Siempre arranca en el mes actual: es donde se carga lo del día.
+const mesActual = () => Reglas.hoy().slice(0, 7);
+let filtro = mesActual();
+let visibles = [];   // índices de rows que se muestran, en orden de carga
+const enVista = () => visibles.map(i => rows[i]);
+
+// ── Tipos de desvío (configurables, guardados en el dispositivo) ──
+const KEY_TIPOS = 'nc_tipos.v1';
+let tipos = null;   // se completa en iniciar(), cuando ya se leyeron las NC
+function leerTipos() { try { const t = JSON.parse(localStorage.getItem(KEY_TIPOS)); return Array.isArray(t) ? Reglas.normalizarTipos(t) : null; } catch (e) { return null; } }
+function guardarTipos() { try { localStorage.setItem(KEY_TIPOS, JSON.stringify(tipos)); } catch (e) { toast('⚠ No se pudieron guardar los tipos de desvío.'); } }
 
 // ════════════════════════════════════════════
 // PERSISTENCIA — cada fila tocada se guarda sola (con un pequeño retardo) en IndexedDB
@@ -93,8 +71,13 @@ const siguienteOrden = () => rows.reduce((m, r) => Math.max(m, r._o || 0), 0) + 
 // ════════════════════════════════════════════
 // FILAS: alta, anulación, duplicados, borrado total
 // ════════════════════════════════════════════
+// Nueva NC con la fecha de hoy y su plazo: la carga diaria arranca con lo que ya se sabe.
 function addRow() {
-  rows.push(DB.nuevaFila(siguienteOrden()));
+  const r = DB.nuevaFila(siguienteOrden());
+  r.fecha = Reglas.hoy();
+  r.plazo = r._plazoAuto = sumarHabiles(r.fecha, BRAND.plazoDias);
+  rows.push(r);
+  if (filtro !== 'abiertas') filtro = mesActual();
   if (esMovil()) { if (_cardExpanded === null) _cardExpanded = rows.map((_, k) => k === rows.length - 1); else _cardExpanded.push(true); }
   render(); marcar(rows.length - 1);
   if (esMovil()) scrollTo({ top: 0 });
@@ -103,7 +86,7 @@ function anular(idx) {
   const r = rows[idx];
   if (!r) return;
   if (r.est === 'Anulado') { alert('Esa NC ya está anulada.'); return; }
-  if (!confirm(`¿Anular la NC N°${idx + 1}? Queda registrada con estado "Anulado" (no se borra).\n\nPara eliminar definitivamente usá 🗑 Borrar todo (reinicio de mes).`)) return;
+  if (!confirm(`¿Anular la NC N°${numero(idx)}? Queda registrada con estado "Anulado" (no se borra).\n\nPara eliminar definitivamente usá 🗑 Borrar todo (reinicio de mes).`)) return;
   r.est = 'Anulado';
   render(); marcar(idx);
 }
@@ -115,21 +98,24 @@ function actualizarSelectorAnular() {
   const sel = $('sel-del-row');
   const prev = parseInt(sel.value);
   sel.innerHTML = '';
-  if (!rows.length) { const o = document.createElement('option'); o.textContent = 'Sin filas'; sel.appendChild(o); return; }
-  rows.forEach((r, i) => {
+  if (!visibles.length) { const o = document.createElement('option'); o.textContent = 'Sin filas'; sel.appendChild(o); return; }
+  visibles.forEach(i => {
+    const r = rows[i];
     const o = document.createElement('option');
     o.value = i;
-    const raw = '#' + (i + 1) + ' ' + (r.lote || r.prod || r.fecha || 'Fila ' + (i + 1));
+    const raw = '#' + numero(i) + ' ' + (r.lote || r.prod || r.fecha || 'Fila');
     o.textContent = raw.length > 22 ? raw.slice(0, 21) + '…' : raw;
     sel.appendChild(o);
   });
-  sel.value = (!isNaN(prev) && prev < rows.length) ? prev : rows.length - 1;
+  sel.value = visibles.includes(prev) ? prev : visibles[visibles.length - 1];
 }
 
-// Firma de contenido: dos NC con la misma firma son la misma NC cargada dos veces.
-const firma = r => ['fecha', 'lote', 'cliente', 'prod', 'tipo', 'sev', 'detec', 'desc', 'litNC', 'litTot', 'pallets']
-  .map(k => (r[k] == null ? '' : '' + r[k]).trim().toLowerCase()).join('|');
-const tieneContenido = r => !!(r.lote || r.prod || r.tipo || r.desc || r.cliente);
+// Número de la NC dentro de su mes (en el orden en que se cargó). Es el mismo en la vista del mes,
+// en "abiertas", en la impresión y en el Excel.
+function numero(i) {
+  const mes = Reglas.mesDe(rows[i], mesActual());
+  return rows.filter((r, k) => k <= i && Reglas.mesDe(r, mesActual()) === mes).length;
+}
 
 async function quitarDuplicados() {
   const vistos = new Map(); const resultado = []; let elim = 0;
@@ -151,7 +137,8 @@ async function quitarDuplicados() {
 
 async function borrarTodo() {
   // Doble confirmación: borra TODO (reinicio de mes / empezar de cero)
-  if (!confirm('⚠ BORRAR TODO\n\nEsto elimina TODAS las NC del registro. Se usa solo para reiniciar el mes o empezar de cero.\n\nAntes de seguir, descargá el Excel (⬇) y un backup (💾) si querés conservar el mes.\n\n¿Continuar?')) return;
+  // Ya no hace falta para empezar un mes nuevo: cada mes se ve por separado con el selector.
+  if (!confirm('⚠ BORRAR TODO\n\nEsto elimina TODAS las NC de TODOS los meses. No hace falta para empezar un mes nuevo: elegí el mes en «Ver».\n\nAntes de seguir, descargá un backup (💾) si querés conservarlas.\n\n¿Continuar?')) return;
   if (prompt('Para confirmar, escribí la palabra BORRAR (en mayúsculas):') !== 'BORRAR') { setSave('ok', 'Borrado cancelado.'); return; }
   rows = []; _cardExpanded = null; pendientes.clear();
   await DB.borrarTodo();
@@ -162,6 +149,8 @@ async function borrarTodo() {
 // RENDER — reconstruye la tabla (o las tarjetas) desde rows[]
 // ════════════════════════════════════════════
 function render() {
+  visibles = Reglas.filtrar(rows, filtro, mesActual());
+  pintarMeses();
   const tb = $('tBody');
   tb.innerHTML = '';
   const movil = esMovil();
@@ -169,7 +158,7 @@ function render() {
     if (_cardExpanded === null) _cardExpanded = rows.map((_, k) => k === rows.length - 1);
     else { while (_cardExpanded.length < rows.length) _cardExpanded.push(true); _cardExpanded = _cardExpanded.slice(0, rows.length); }
   }
-  const orden = rows.map((_, k) => k);
+  const orden = visibles.slice();
   if (movil) orden.reverse();   // celular: la última NC arriba
 
   orden.forEach(i => {
@@ -182,7 +171,7 @@ function render() {
       if (!_cardExpanded[i]) tr.classList.add('nc-collapsed');
       const hdr = document.createElement('td');
       hdr.className = 'nc-card-hdr';
-      hdr.appendChild(span('nc-hdr-num', '#' + (i + 1)));
+      hdr.appendChild(span('nc-hdr-num', '#' + numero(i)));
       if (r.lote) hdr.appendChild(span('nc-hdr-lote', r.lote));
       if (r.prod) hdr.appendChild(span('nc-hdr-prod', r.prod));
       if (r.sev) hdr.appendChild(span('sev-badge ' + (SEV_CLS[r.sev] || ''), (SEV_ICON[r.sev] || '') + ' ' + r.sev));
@@ -199,17 +188,22 @@ function render() {
       tr.appendChild(hdr);
     }
 
-    mkTd(tr, 'c0', String(i + 1));
+    mkTd(tr, 'c0', String(numero(i)));
     mkInp(tr, 'c1', 'date', r.fecha, v => { r.fecha = v; autoPlazo(i); marcar(i); updateKPIs(); }, 'Fecha detección');
+    // Si la fecha cambia de mes, la NC pasa a ese mes al terminar de editarla.
+    tr.querySelector('td.c1 input').addEventListener('change', () => { if (Reglas.mesDe(r, mesActual()) !== filtro && filtro !== 'abiertas') { filtro = Reglas.mesDe(r, mesActual()); renderConScroll(); toast('La NC pasó a ' + Reglas.nombreMes(filtro)); } });
     mkInp(tr, 'c2', 'text', r.lote, v => { r.lote = v; marcar(i); }, 'N° Lote');
     mkInp(tr, 'c3', 'text', r.prod, v => { r.prod = v; marcar(i); }, 'Producto');
 
     const tdT = mkTdEl(tr, 'c4', 'Tipo de desvío');
     tdT.dataset.val = r.tipo || '';
-    tdT.appendChild(mkSelect(TIPOS.map(t => ({ v: t.label, l: t.label || '—' })), r.tipo, e => {
+    // Un tipo que ya no está en la lista (se borró o se cambió de rubro) se sigue mostrando en esa NC.
+    const opcTipos = [{ v: '', l: '—' }, ...tipos.map(t => ({ v: t.label, l: t.label }))];
+    if (r.tipo && !tipos.some(t => t.label === r.tipo)) opcTipos.push({ v: r.tipo, l: r.tipo });
+    tdT.appendChild(mkSelect(opcTipos, r.tipo, e => {
       r.tipo = e.target.value;
-      const t = TIPOS.find(x => x.label === r.tipo);
-      if (t && t.sev) r.sev = t.sev;
+      const sev = Reglas.sevSugerida(tipos, r.tipo);
+      if (sev) r.sev = sev;
       marcar(i); renderConScroll();
     }));
 
@@ -243,7 +237,8 @@ function render() {
 
     tb.appendChild(tr);
   });
-  $('vacio').hidden = rows.length > 0;
+  $('vacio').hidden = visibles.length > 0;
+  $('vacio').textContent = filtro === 'abiertas' ? 'No hay NC abiertas. 🎉' : 'Todavía no hay NC en ' + Reglas.nombreMes(filtro) + '. Tocá «+ Agregar NC de hoy».';
   updateKPIs();
   actualizarSelectorAnular();
   renderPrintAcciones();
@@ -302,45 +297,37 @@ function autoPlazo(i) {
 // AQ-IND-04: % de reprocesos (litNC>0 con plazo) finalizados dentro del plazo
 // ════════════════════════════════════════════
 function updateKPIs() {
-  const a = rows.filter(r => r.est !== 'Anulado');
-  $('kpi1').textContent = a.length;
-
-  const sNC = a.reduce((x, r) => x + (parseFloat(r.litNC) || 0), 0);
-  const sT = a.reduce((x, r) => x + (parseFloat(r.litTot) || 0), 0);
-  if (sT > 0) { const t = sNC / sT * 100; $('kpi2').textContent = t.toFixed(1) + '%'; $('kpi2-card').className = 'kpi-card' + (t > 5 ? ' warn' : ''); }
+  const k = Reglas.kpis(enVista());
+  $('kpi1-label').textContent = filtro === 'abiertas' ? 'AQ-IND-01 · NC abiertas' : 'AQ-IND-01 · NC Totales del mes';
+  $('kpi1').textContent = k.activas;
+  if (k.tasaLitros !== null) { $('kpi2').textContent = k.tasaLitros.toFixed(1) + '%'; $('kpi2-card').className = 'kpi-card' + (k.tasaLitros > 5 ? ' warn' : ''); }
   else { $('kpi2').textContent = '—'; $('kpi2-card').className = 'kpi-card'; }
-
-  const freq = {};
-  a.forEach(r => { if (r.tipo) freq[r.tipo] = (freq[r.tipo] || 0) + 1; });
-  const orden = Object.entries(freq).sort((x, y) => y[1] - x[1]);
-  if (orden.length && a.length) {
-    const pct = orden[0][1] / a.length * 100;
-    $('kpi3').textContent = orden[0][0]; $('kpi3-sub').textContent = pct.toFixed(0) + '% (' + orden[0][1] + ' eventos)';
-    $('kpi3-card').className = 'kpi-card' + (pct >= 40 ? ' warn' : '');
+  if (k.masFrecuente) {
+    const m = k.masFrecuente;
+    $('kpi3').textContent = m.tipo; $('kpi3-sub').textContent = m.pct.toFixed(0) + '% (' + m.veces + ' eventos)';
+    $('kpi3-card').className = 'kpi-card' + (m.pct >= 40 ? ' warn' : '');
   } else { $('kpi3').textContent = '—'; $('kpi3-sub').textContent = 'sin datos'; $('kpi3-card').className = 'kpi-card'; }
+  if (k.enPlazo !== null) { $('kpi4').textContent = k.enPlazo.toFixed(0) + '%'; $('kpi4-card').className = 'kpi-card' + (k.enPlazo < 90 ? (k.enPlazo < 70 ? ' warn' : ' mid') : ''); }
+  else { $('kpi4').textContent = '—'; $('kpi4-card').className = 'kpi-card'; }
+  $('sev-leve').textContent = k.sev.Leve;
+  $('sev-mod').textContent = k.sev.Moderado;
+  $('sev-crit').textContent = k.sev['Crítico'];
+}
 
-  const conPlazo = a.filter(r => r.plazo && parseFloat(r.litNC) > 0);
-  const enPlazo = conPlazo.filter(r => r.est === 'Finalizado' && r.cierre && toISO(r.cierre) <= toISO(r.plazo));
-  if (conPlazo.length) {
-    const t = enPlazo.length / conPlazo.length * 100;
-    $('kpi4').textContent = t.toFixed(0) + '%'; $('kpi4-card').className = 'kpi-card' + (t < 90 ? (t < 70 ? ' warn' : ' mid') : '');
-  } else { $('kpi4').textContent = '—'; $('kpi4-card').className = 'kpi-card'; }
-
-  $('sev-leve').textContent = a.filter(r => r.sev === 'Leve').length;
-  $('sev-mod').textContent = a.filter(r => r.sev === 'Moderado').length;
-  $('sev-crit').textContent = a.filter(r => r.sev === 'Crítico').length;
+// Selector de mes: los meses con NC (más el actual) y la vista de abiertas.
+function pintarMeses() {
+  const sel = $('sel-mes');
+  const nAb = rows.filter(Reglas.abierta).length;
+  const opc = [{ v: 'abiertas', l: `Abiertas, todos los meses (${nAb})` }, ...Reglas.meses(rows, mesActual()).map(m => ({ v: m, l: Reglas.nombreMes(m) }))];
+  sel.innerHTML = opc.map(o => `<option value="${esc(o.v)}">${esc(o.l)}</option>`).join('');
+  sel.value = filtro;
 }
 
 // ════════════════════════════════════════════
 // ENCABEZADO / PERÍODO / IMPRESIÓN
 // ════════════════════════════════════════════
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-function periodo() {
-  let guardado = '';
-  try { guardado = (localStorage.getItem('nc_periodo') || '').trim(); } catch (e) { }
-  const h = new Date();
-  return guardado || MESES[h.getMonth()] + ' ' + h.getFullYear();
-}
+// El período impreso es el mes elegido (o la fecha de hoy, si se imprimen las abiertas).
+const periodo = () => filtro === 'abiertas' ? 'NC abiertas al ' + isoToDMY(Reglas.hoy()) : Reglas.nombreMes(filtro);
 function htmlMarca() {
   return BRAND.logo
     ? `<img src="${esc(BRAND.logo)}" alt="${esc(BRAND.empresa)}">`
@@ -353,7 +340,6 @@ function pintarEncabezados() {
   set('ph-elaboro', BRAND.elaboro); set('ph-aprobo', BRAND.aprobo); set('periodo-val', periodo());
   set('pc-codigo', BRAND.codigo); set('pc-version', BRAND.version); set('pc-area', BRAND.area);
   set('pc-elaboro', BRAND.elaboro); set('pc-aprobo', BRAND.aprobo); set('pc-proceso', BRAND.proceso);
-  $('in-periodo').value = (() => { try { return localStorage.getItem('nc_periodo') || ''; } catch (e) { return ''; } })();
   $('brand').innerHTML = `<span class="q-mark" aria-hidden="true"><img src="qualityos.svg" alt=""></span><span class="brand-nombre">Registro de No Conformidades</span>`;
   // Encabezado impreso: logo si hay, si no el nombre de la empresa.
   const printMarca = $('print-marca');
@@ -376,7 +362,7 @@ function pintarEncabezados() {
 // Segunda hoja de impresión: Acciones Correctivas / Disposición (solo NC no anuladas, con su N° original)
 function renderPrintAcciones() {
   const el = $('print-acciones');
-  const activas = rows.map((r, i) => ({ r, n: i + 1 })).filter(x => x.r.est !== 'Anulado');
+  const activas = visibles.map(i => ({ r: rows[i], n: numero(i) })).filter(x => x.r.est !== 'Anulado');
   const celdas = activas.map(({ r, n }) => {
     const cls = r.est === 'Finalizado' ? 'pac-final' : r.est === 'En proceso' ? 'pac-proc' : 'pac-pend';
     return `<tr>
@@ -409,8 +395,8 @@ function renderPrintAcciones() {
     <tbody>${celdas}</tbody>
   </table>
   <div class="pac-sigs">
-    <div class="pac-sig-box">Checker de Calidad<br><br>&nbsp;</div>
-    <div class="pac-sig-box">Coordinadora de Calidad<br><br>&nbsp;</div>
+    <div class="pac-sig-box">Inspector de Calidad<br><br>&nbsp;</div>
+    <div class="pac-sig-box">Coordinación de Calidad<br><br>&nbsp;</div>
     <div class="pac-sig-box">Revisión SGC / Gerencia<br><br>&nbsp;</div>
   </div>`;
 }
@@ -422,12 +408,12 @@ function prepararImpresion() {
 addEventListener('beforeprint', prepararImpresion);
 
 // ════════════════════════════════════════════
-// EXCEL — registro completo (todas las filas con datos, anuladas incluidas con su estado)
+// EXCEL — las NC que se ven (el mes elegido o las abiertas), anuladas incluidas con su estado
 // ════════════════════════════════════════════
 const MINS_POR_PALLET = { 'Bidón/es por inducción': 5, 'Inducción débil': 20, 'Pérdida (bidón/es pinchados)': 20, 'Palét chocado': 20 };
 function exportarExcel() {
   if (typeof XLSX === 'undefined') { toast('⚠ No cargó la librería de Excel.'); return; }
-  const filas = rows.map((r, i) => ({ r, n: i + 1 })).filter(x => x.r.lote || x.r.prod || x.r.tipo);
+  const filas = visibles.map(i => ({ r: rows[i], n: numero(i) })).filter(x => x.r.lote || x.r.prod || x.r.tipo);
   if (!filas.length) { toast('⚠ No hay datos para exportar.'); return; }
   const datos = [[
     '#', 'Fecha Detección', 'N° Lote', 'Producto', 'Cliente', 'Tipo de Desvío', 'Gravedad', 'Detección',
@@ -450,55 +436,85 @@ function exportarExcel() {
 }
 
 // ════════════════════════════════════════════
-// PUENTE REG-01 → registro (localStorage 'reg01_nc_pendientes', mismo origen)
+// PEGAR DESVÍOS DE QUALITYOS (botón "Copiar para el registro de NC" del lote)
+// Reemplaza al puente con REG-01, que solo andaba si las dos apps estaban en el mismo sitio.
 // ════════════════════════════════════════════
-function verificarImportPendiente() {
-  try {
-    const raw = localStorage.getItem('reg01_nc_pendientes');
-    if (!raw) return;
-    const payload = JSON.parse(raw);
-    if (!payload || !payload.filas || !payload.filas.length) return;
-    const banner = $('import-banner');
-    banner.style.display = 'flex';
-    $('import-titulo').textContent = `📥 Desvíos desde REG-01 — ${payload.origen || ''}`;
-    const ab = payload.resumen?.abiertas ?? payload.filas.filter(f => f.est === 'Pendiente').length;
-    const co = payload.resumen?.correccionesLinea ?? payload.filas.filter(f => f.est === 'Finalizado').length;
-    const ts = payload.timestamp ? new Date(payload.timestamp).toLocaleString('es-AR') : '';
-    const partes = [];
-    if (ab) partes.push(`⚠ ${ab} NC abierta(s) → estado Pendiente`);
-    if (co) partes.push(`✔ ${co} corrección(es) en línea → estado Finalizado`);
-    $('import-detalle').textContent = partes.join('  ·  ') + (ts ? '  ·  Generado: ' + ts : '');
-  } catch (e) { }
+let pegadas = [];   // NC nuevas listas para agregar (ya sin las repetidas)
+function leerPegado() {
+  const { lineas, filas } = Reglas.leerDesviosQualityOS($('in-pegar').value, tipos, BRAND.plazoDias);
+  const existentes = new Set(rows.filter(tieneContenido).map(firma));
+  pegadas = [];
+  let repetidas = 0;
+  filas.forEach(f => {
+    const r = Object.assign(DB.nuevaFila(siguienteOrden() + pegadas.length), f);
+    const fr = firma(r);
+    if (existentes.has(fr)) { repetidas++; return; }   // ya se había pegado: no se duplica
+    existentes.add(fr); pegadas.push(r);
+  });
+  const txt = $('in-pegar').value.trim();
+  $('pegar-resumen').textContent = !txt ? '' : !lineas
+    ? '⚠ No se reconocen desvíos de QualityOS en el texto pegado.'
+    : `${lineas} desvío(s) → ${pegadas.length} NC nueva(s)` + (repetidas ? ` · ${repetidas} ya estaban en el registro` : '') +
+      (pegadas.some(r => !r.tipo) ? ' · elegí el tipo de desvío en las que queden sin tipo' : '');
+  $('btn-pegar-ok').disabled = !pegadas.length;
 }
-function importarDesdeReg01() {
-  try {
-    const payload = JSON.parse(localStorage.getItem('reg01_nc_pendientes'));
-    const existentes = new Set(rows.filter(tieneContenido).map(firma));
-    let omitidas = 0;
-    const nuevas = [];
-    payload.filas.forEach(f => {
-      const r = DB.nuevaFila(siguienteOrden() + nuevas.length);
-      ['lote', 'cliente', 'prod', 'tipo', 'sev', 'detec', 'desc', 'litNC', 'litTot', 'ac', 'pallets', 'resp'].forEach(k => { r[k] = f[k] || ''; });
-      r.fecha = toISO(f.fecha);
-      r.est = f.est || 'Pendiente';
-      r.eficacia = f.eficacia || 'Pendiente';
-      if (r.fecha) r.plazo = r._plazoAuto = sumarHabiles(r.fecha, BRAND.plazoDias);
-      const fr = firma(r);
-      if (existentes.has(fr)) { omitidas++; return; }   // ya estaba cargada: no se duplica
-      existentes.add(fr); nuevas.push(r);
-    });
-    const desde = rows.length;
-    rows = rows.concat(nuevas);
-    render(); nuevas.forEach((_, k) => marcar(desde + k));
-    localStorage.removeItem('reg01_nc_pendientes');
-    $('import-banner').style.display = 'none';
-    toast(`✅ ${nuevas.length} fila(s) importadas` + (omitidas ? ` · ${omitidas} ya existían` : ''));
-  } catch (e) { toast('⚠ Error al importar. Intentá de nuevo.'); }
+function abrirPegar() {
+  const p = $('panel-pegar');
+  p.hidden = !p.hidden;
+  if (!p.hidden) { $('in-pegar').value = ''; leerPegado(); $('in-pegar').focus(); }
 }
-function descartarImport() {
-  try { localStorage.removeItem('reg01_nc_pendientes'); } catch (e) { }
-  $('import-banner').style.display = 'none';
-  toast('Importación descartada');
+function agregarPegadas() {
+  if (!pegadas.length) return;
+  const desde = rows.length;
+  rows = rows.concat(pegadas);
+  // Se muestra el mes de la primera NC agregada (normalmente, el de hoy).
+  if (filtro !== 'abiertas') filtro = Reglas.mesDe(pegadas[0], mesActual());
+  const n = pegadas.length;
+  pegadas = [];
+  _cardExpanded = null;
+  render(); for (let k = desde; k < rows.length; k++) marcar(k);
+  $('panel-pegar').hidden = true;
+  toast(`✅ ${n} NC agregada(s) desde QualityOS`);
+}
+
+// ════════════════════════════════════════════
+// TIPOS DE DESVÍO — editor en ⚙️ Configuración
+// ════════════════════════════════════════════
+function pintarTipos() {
+  const cont = $('lista-tipos');
+  cont.innerHTML = '';
+  tipos.forEach((t, k) => {
+    const fila = document.createElement('div');
+    fila.className = 'tipo-fila';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = t.label; inp.setAttribute('aria-label', 'Tipo de desvío ' + (k + 1));
+    // Al renombrar, las NC que ya tenían ese tipo lo conservan escrito como estaba.
+    inp.addEventListener('change', () => { t.label = inp.value; tipos = Reglas.normalizarTipos(tipos); guardarTipos(); pintarTipos(); renderConScroll(); });
+    const sel = mkSelect(SEVS.map(s => ({ v: s, l: s ? SEV_ICON[s] + ' ' + s : '— sin gravedad' })), t.sev, e => { t.sev = e.target.value; guardarTipos(); pintarLeyenda(); });
+    sel.setAttribute('aria-label', 'Gravedad sugerida de ' + t.label);
+    const quitar = document.createElement('button');
+    quitar.type = 'button'; quitar.className = 'pcod-btn'; quitar.textContent = '✕'; quitar.setAttribute('aria-label', 'Quitar ' + t.label);
+    quitar.addEventListener('click', () => { tipos.splice(k, 1); guardarTipos(); pintarTipos(); renderConScroll(); });
+    fila.append(inp, sel, quitar);
+    cont.appendChild(fila);
+  });
+  pintarLeyenda();
+}
+function pintarLeyenda() {
+  $('legend-tipos').innerHTML = tipos.map(t => `<span>${SEV_ICON[t.sev] || '⚪'} ${esc(t.label)}</span>`).join('');
+}
+function agregarTipo() {
+  const nombre = (prompt('Nombre del tipo de desvío:') || '').trim();
+  if (!nombre) return;
+  if (tipos.some(t => t.label.toLowerCase() === nombre.toLowerCase())) { toast('Ese tipo ya está en la lista'); return; }
+  tipos.push({ label: nombre, sev: '' });
+  guardarTipos(); pintarTipos(); renderConScroll();
+}
+function cargarEjemplo(e) {
+  const rubro = e.target.value; e.target.value = '';
+  if (!rubro || !confirm(`¿Reemplazar la lista de tipos de desvío por el ejemplo «${rubro}»?\n\nLas NC ya cargadas no cambian.`)) return;
+  tipos = Reglas.ejemplo(rubro);
+  guardarTipos(); pintarTipos(); renderConScroll();
 }
 
 // ════════════════════════════════════════════
@@ -546,9 +562,14 @@ $('file-backup').addEventListener('change', importarBackup);
 $('btn-dups').addEventListener('click', quitarDuplicados);
 $('btn-clear').addEventListener('click', borrarTodo);
 $('btn-cod').addEventListener('click', () => { const p = $('panel-codificacion'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; });
-$('btn-importar').addEventListener('click', importarDesdeReg01);
-$('btn-descartar').addEventListener('click', descartarImport);
-$('in-periodo').addEventListener('input', e => { try { localStorage.setItem('nc_periodo', e.target.value.trim()); } catch (err) { } pintarEncabezados(); renderPrintAcciones(); });
+$('sel-mes').addEventListener('change', e => { filtro = e.target.value; _cardExpanded = null; render(); pintarEncabezados(); });
+$('btn-pegar').addEventListener('click', abrirPegar);
+$('in-pegar').addEventListener('input', leerPegado);
+$('btn-pegar-ok').addEventListener('click', agregarPegadas);
+$('btn-pegar-cancelar').addEventListener('click', () => { $('panel-pegar').hidden = true; });
+$('btn-tipo-add').addEventListener('click', agregarTipo);
+$('sel-ejemplo').innerHTML += Object.keys(Reglas.EJEMPLOS).map(n => `<option>${esc(n)}</option>`).join('');
+$('sel-ejemplo').addEventListener('change', cargarEjemplo);
 // Empresa y logo: se guardan en el dispositivo y se aplican a las impresiones.
 $('in-empresa').addEventListener('input', e => {
   Marca.datos.empresa = e.target.value;
@@ -580,13 +601,14 @@ addEventListener('resize', () => { if (esMovil() !== _modoMovil) { _modoMovil = 
 async function iniciar() {
   pintarTema();
   pintarEncabezados();
-  $('legend-tipos').innerHTML = TIPOS.filter(t => t.label).map(t => `<span>${SEV_ICON[t.sev]} ${esc(t.label)}</span>`).join('');
   try {
     rows = (await DB.listar()).sort((a, b) => (a._o || 0) - (b._o || 0));
-    setSave('ok', rows.length ? '✅ Datos restaurados — ' + rows.length + ' registro/s' : 'Registro vacío — listo para cargar NCs del mes.');
+    setSave('ok', rows.length ? '✅ Datos restaurados — ' + rows.length + ' registro/s' : 'Registro vacío — listo para cargar las NC del día.');
   } catch (e) { rows = []; setSave('error'); }
+  tipos = leerTipos();
+  if (!tipos) { tipos = Reglas.tiposIniciales(rows); guardarTipos(); }
+  pintarTipos();
   render();
-  verificarImportPendiente();
   // Pedir al navegador que no borre los datos si falta espacio
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
 }

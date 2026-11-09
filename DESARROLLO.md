@@ -1,7 +1,8 @@
 # Desarrollo — Registro de No Conformidades
 
 Información técnica para quien quiera modificar o publicar la app. Para usarla, ver el
-[README](README.md). Es una réplica local del `registro_nc` de QualityOS.
+[README](README.md). Nació como réplica local del `registro_nc` de la QualityOS vieja; es la
+versión sin cuenta ni servidor. QualityOS va a tener su propio módulo de NC (código distinto).
 
 ## Tecnologías
 
@@ -17,12 +18,16 @@ HTML + CSS + JavaScript vanilla, sin build ni dependencias de Node.
 ├── manifest.json       # Configuración PWA
 ├── sw.js               # Service worker (caché offline)
 ├── js/
-│   ├── app.js          # Lógica de la app, KPIs, impresión, Excel
+│   ├── app.js          # Pantalla: tabla/tarjetas, impresión, Excel, configuración
+│   ├── reglas.js       # Reglas puras: meses, indicadores, tipos, desvíos de QualityOS
 │   ├── db.js           # Capa de datos (IndexedDB)
 │   ├── marca.js        # Empresa y logo configurables (Marca)
 │   └── backup.js       # Exportar/importar backup .json
 ├── vendor/
 │   └── xlsx.full.min.js
+├── tests/
+│   ├── reglas.test.js  # Pruebas de las reglas (Node)
+│   └── e2e.js          # Recorrido completo en Chromium (Playwright)
 └── IDEAS.md            # Ideas pendientes
 ```
 
@@ -58,11 +63,17 @@ const BRAND = {
 };
 ```
 
-La lista de tipos de desvío (con su severidad sugerida) está en `TIPOS`, dentro de `js/app.js`.
+Los tipos de desvío (con su gravedad sugerida) se arman desde la app (**⚙️ Configuración**) y se
+guardan en `localStorage['nc_tipos.v1']`. Los ejemplos por rubro están en `EJEMPLOS` de
+`js/reglas.js`. La primera vez, si ya hay NC con los tipos de agroquímicos (versiones anteriores),
+se arranca con esa lista; si no, con la general.
 
 ## Datos
 
 Todo se guarda localmente en IndexedDB (base `calidad_nc_v1`, store `filas`; una fila por NC).
+Las NC no se borran al cambiar de mes: cada una pertenece al mes de su fecha de detección
+(`Reglas.mesDe`) y la pantalla filtra por mes o por abiertas. El número de cada NC es su orden
+dentro de su mes.
 Los stores `no_conformidades` y `meta` son de la Fase 1 (fichas) y se dejan intactos por si hay datos.
 El backup es un JSON `{ app: 'registro_nc', version: 2, filas }`; al importar también se aceptan
 fichas de la Fase 1 y se convierten a filas (`js/backup.js`).
@@ -74,7 +85,24 @@ fichas de la Fase 1 y se convierten a filas (`js/backup.js`).
 - AQ-IND-03: desvío más frecuente
 - AQ-IND-04: % de reprocesos finalizados dentro de plazo
 
-Se calculan en `updateKPIs()` (`js/app.js`).
+Se calculan en `Reglas.kpis()` sobre las NC que se ven (el mes elegido o las abiertas).
+
+## Desvíos de QualityOS
+
+QualityOS copia los desvíos de un lote como texto con tabulaciones
+(fecha · lote · cliente · producto · etapa · unidad · control y detalle · Reprocesado/Abierto · obs).
+`Reglas.leerDesviosQualityOS()` agrupa por lote + etapa + control + estado (una NC por evento y
+tipo de desvío), usa el tipo configurado si coincide con el nombre del control, deja cerradas las
+corregidas en el momento y calcula el plazo de las abiertas. Si QualityOS cambia ese formato,
+actualizar esta función y su prueba.
+
+## Pruebas
+
+```bash
+. ~/.nvm/nvm.sh; export NODE_PATH=$(npm root -g)   # Node y Playwright global
+node --test tests/                 # reglas
+node tests/e2e.js [carpeta]        # navegador real; carpeta opcional para capturas y PDF
+```
 
 ## Mantenimiento
 
@@ -83,4 +111,4 @@ Se calculan en `updateKPIs()` (`js/app.js`).
 
 ## Ideas a futuro
 
-Ver [IDEAS.md](IDEAS.md): fotos por NC, mejora de texto con IA, tipos de desvío configurables y puente con REG-01 por archivo.
+Ver [IDEAS.md](IDEAS.md).
