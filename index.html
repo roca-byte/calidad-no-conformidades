@@ -24,16 +24,18 @@
 
 <div class="page">
 
-  <!-- Banner de importación desde REG-01 -->
-  <div id="import-banner" class="no-print" style="display:none;background:rgba(0,200,150,.07);border:1.5px solid rgba(0,200,150,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:12px;flex-wrap:wrap">
-    <span style="font-size:18px">📥</span>
-    <div style="flex:1;min-width:0">
-      <div style="font-weight:700;color:var(--accent);font-size:.8rem;letter-spacing:.04em" id="import-titulo">NC pendientes del REG-01</div>
-      <div style="font-size:.68rem;color:var(--muted);margin-top:2px" id="import-detalle"></div>
+  <!-- Pegar desvíos copiados desde un lote de QualityOS ("Copiar para el registro de NC") -->
+  <section id="panel-pegar" class="panel no-print" hidden>
+    <h2 class="panel-tit">📋 Pegar desvíos de QualityOS</h2>
+    <p class="panel-hint">En QualityOS, abrí el lote → Dictamen → <b>Copiar para el registro de NC</b>, y pegá acá.
+      El mismo control que falló en varias unidades de un lote entra como <b>una</b> NC.</p>
+    <textarea id="in-pegar" rows="5" placeholder="Pegá acá (mantené apretado → Pegar, o Ctrl+V)"></textarea>
+    <p id="pegar-resumen" class="panel-hint" aria-live="polite"></p>
+    <div class="panel-acciones">
+      <button type="button" class="btn btn-add" id="btn-pegar-ok" disabled>✔ Agregar al registro</button>
+      <button type="button" class="btn" id="btn-pegar-cancelar">Cancelar</button>
     </div>
-    <button id="btn-importar" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:6px 14px;font-weight:700;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;font-family:inherit">✔ Importar</button>
-    <button id="btn-descartar" style="background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:.68rem;cursor:pointer;white-space:nowrap;font-family:inherit">✕ Descartar</button>
-  </div>
+  </section>
 
   <!-- Encabezado: solo se ve al imprimir -->
   <div id="doc-header-print" style="display:none">
@@ -54,7 +56,7 @@
 
   <div class="kpi-bar">
     <div class="kpi-card" id="kpi1-card">
-      <div class="kpi-label">AQ-IND-01 · NC Totales del mes</div>
+      <div class="kpi-label" id="kpi1-label">AQ-IND-01 · NC Totales del mes</div>
       <div class="kpi-val" id="kpi1">0</div>
       <div class="kpi-sub">eventos registrados</div>
     </div>
@@ -83,7 +85,9 @@
 
   <div class="toolbar no-print">
     <div class="toolbar-row">
-      <button class="btn btn-add" id="btn-add">+ Agregar fila</button>
+      <label class="mes-sel"><span>Ver</span><select id="sel-mes" class="btn" aria-label="Mes del registro"></select></label>
+      <button class="btn btn-add" id="btn-add">+ Agregar NC de hoy</button>
+      <button class="btn" id="btn-pegar">📋 Pegar de QualityOS</button>
       <button class="btn" id="btn-guardar" style="background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700">💾 Guardar</button>
       <select id="sel-del-row" class="btn" style="min-width:90px;cursor:pointer" title="Seleccionar NC a anular"></select>
       <button class="btn btn-del" id="btn-anular">⊘ Anular NC</button>
@@ -95,7 +99,7 @@
       <label class="btn" style="margin:0">⬆ Importar backup<input type="file" id="file-backup" accept="application/json,.json" hidden></label>
       <button class="btn btn-clear" id="btn-dups">🧹 Quitar duplicados</button>
       <button class="btn btn-clear" id="btn-clear">🗑 Borrar todo</button>
-      <button class="btn" id="btn-cod">⚙️ Codificación</button>
+      <button class="btn" id="btn-cod">⚙️ Configuración</button>
     </div>
   </div>
 
@@ -107,7 +111,6 @@
       <div class="pcod-item"><span class="pcod-label">Elaborado por</span><span class="pcod-val" id="pc-elaboro"></span></div>
       <div class="pcod-item"><span class="pcod-label">Aprobado por</span><span class="pcod-val" id="pc-aprobo"></span></div>
       <div class="pcod-item"><span class="pcod-label">Proceso</span><span class="pcod-val" id="pc-proceso"></span></div>
-      <div class="pcod-item"><label class="pcod-label" for="in-periodo">Período</label><input type="text" id="in-periodo" placeholder="(mes y año actual)"></div>
     </div>
     <div style="margin-top:6px;color:var(--muted);font-size:10px">Los datos de codificación se editan en <b>brand.js</b>.</div>
     <div class="pcod-marca">
@@ -124,6 +127,15 @@
       </div>
     </div>
     <div class="pcod-hint">El nombre y el logo se usan en el encabezado impreso. Si cargás un logo, reemplaza al nombre.</div>
+    <div class="pcod-tipos">
+      <div class="pcod-label">Tipos de desvío y gravedad sugerida</div>
+      <div class="pcod-hint">Cada empresa define los suyos. Al elegir un tipo en una NC, la gravedad se completa sola (se puede cambiar).</div>
+      <div id="lista-tipos"></div>
+      <div class="pcod-tipos-acc">
+        <button type="button" class="pcod-btn" id="btn-tipo-add">+ Agregar tipo</button>
+        <label class="pcod-label">Cargar ejemplo <select id="sel-ejemplo" class="pcod-btn"><option value="">elegir rubro…</option></select></label>
+      </div>
+    </div>
   </div>
 
   <div class="save-bar no-print">
@@ -179,7 +191,7 @@
   </div>
 
   <div class="sigs">
-    <div class="sig-box">Checker de Calidad<br><br>&nbsp;</div>
+    <div class="sig-box">Inspector de Calidad<br><br>&nbsp;</div>
     <div class="sig-box">Coordinación de Calidad<br><br>&nbsp;</div>
     <div class="sig-box">Revisión SGC / Gerencia<br><br>&nbsp;</div>
   </div>
@@ -192,6 +204,7 @@
 
 <script src="brand.js"></script>
 <script src="js/marca.js"></script>
+<script src="js/reglas.js"></script>
 <script src="js/db.js"></script>
 <script src="js/backup.js"></script>
 <script src="js/app.js"></script>
