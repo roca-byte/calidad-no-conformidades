@@ -7,7 +7,12 @@ App para llevar el **registro de No Conformidades (NC)** del área de Calidad: s
 correctivas e indicadores al día.
 Funciona en la compu, la tablet o el celular, y **sin conexión**.
 
-**Abrir la app:** https://roca-byte.github.io/calidad-no-conformidades/
+**Abrir la app:** https://roca-byte.github.io/calidad-no-conformidades/ · [Video (1:31)](docs/video/calidad-no-conformidades-demo.mp4) · [Guía de uso](docs/GUIA.md)
+
+<p align="center"><img src="docs/img/demo.gif" alt="Recorrido: cargar la NC del día y ver las abiertas" width="280"></p>
+
+Es gratis, no necesita cuenta y no depende de [QualityOS](https://github.com/roca-byte/qualityos):
+sirve sola, en cualquier empresa.
 
 ## Para qué sirve
 
@@ -17,9 +22,10 @@ los indicadores y cada mes queda listo para imprimir o pasar a Excel.
 
 ## Qué podés hacer
 
-- **Una fila por NC**: fecha, lote, cliente, producto, tipo de desvío, severidad, cómo se
-  detectó, descripción, litros no conformes y totales, acción correctiva, plazo, estado,
-  fecha de cierre, pallets, responsable y verificación de eficacia.
+- **Una fila por NC**: fecha, lote, producto, cliente, tipo de desvío, severidad, cómo se
+  detectó, descripción, cantidad no conforme y total, acción correctiva, plazo, estado,
+  fecha de cierre, embalaje (pallets, cajas…), responsable y verificación de eficacia.
+- **Unidades a tu medida**: litros y pallets, o kg y cajas, o lo que use tu planta.
 - **Carga del día**: **+ Agregar NC de hoy** crea la NC con la fecha de hoy y el plazo calculado.
 - **Un registro por mes** sin borrar nada: en **Ver** elegís el mes (los indicadores, la
   impresión y el Excel son de ese mes) o **Abiertas**, que junta las NC pendientes y en proceso
@@ -35,7 +41,7 @@ los indicadores y cada mes queda listo para imprimir o pasar a Excel.
   o No eficaz.
 - **Indicadores** que se actualizan solos:
   - NC activas
-  - Porcentaje de litros no conformes sobre el total
+  - Porcentaje de cantidad no conforme (litros u otra unidad) sobre el total
   - Desvío más frecuente
   - Porcentaje de reprocesos terminados dentro del plazo
   - Cantidad de NC por severidad

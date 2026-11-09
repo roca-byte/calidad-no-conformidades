@@ -62,6 +62,7 @@ tr:nth-child(even) td { background: var(--surface2); }
 .c1 {width:62px}                        /* Fecha Detección */
 .c2 {width:72px}                        /* N° Lote */
 .c3 {width:100px; word-break:break-word; white-space:normal} /* Producto */
+.c3b{width:90px; word-break:break-word; white-space:normal} /* Cliente */
 .c4 {width:110px}                       /* Tipo de Desvío */
 .c5 {width:50px; text-align:center}     /* Gravedad */
 .c5b{width:72px; text-align:center}     /* Detección (Control Línea/Final) */
@@ -283,10 +284,11 @@ select:focus, input:focus { outline:1.5px solid var(--accent); border-radius:2px
   .c1  { width:6%  !important; }   /* Fecha det.   ~16mm */
   .c2  { width:7%  !important; }   /* N° Lote      ~21mm */
   .c3  { width:8%  !important; }   /* Producto     ~24mm */
+  .c3b { width:7%  !important; }   /* Cliente      ~20mm */
   .c4  { width:12% !important; }   /* Tipo Desvío  ~35mm */
   .c5  { width:5%  !important; }   /* Gravedad */
   .c5b { width:5%  !important; }   /* Detección    ~13mm */
-  .c6  { width:22% !important; word-wrap:break-word !important; white-space:normal !important; }  /* Descripción ~64mm — suma total columnas = 100% */
+  .c6  { width:15% !important; word-wrap:break-word !important; white-space:normal !important; }  /* Descripción ~44mm — suma total columnas = 100% */
   .c7  { width:4%  !important; }   /* L. NC        ~11mm */
   .c8  { width:4%  !important; }   /* L. Tot.      ~11mm */
   .c10 { width:6%  !important; }   /* Plazo        ~16mm */
@@ -561,7 +563,15 @@ tr.anulada td.c0{text-decoration:line-through}
 @media (max-width:1100px) {
   .mes-sel { flex:1 1 100%; }
   .mes-sel select.btn { flex:1; min-height:48px; font-size:.9rem; }
-  #panel-codificacion .tipo-fila input, #panel-codificacion .tipo-fila select { flex:0 0 150px; width:150px; min-height:44px; font-size:14px; }
+  #panel-codificacion .tipo-fila input, #panel-codificacion .tipo-fila select { min-height:44px; font-size:14px; }
+  /* El nombre ocupa lo que queda; la gravedad, un ancho fijo más angosto que en la compu. */
+  #panel-codificacion .tipo-fila select { flex:0 0 130px; width:130px; }
   #panel-codificacion .tipo-fila .pcod-btn { min-width:44px; min-height:44px; }
 }
 @media print { .panel, .mes-sel { display:none !important; } }
+
+/* Unidades del registro (⚙️ Configuración) */
+#panel-codificacion .pcod-unidades { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+#panel-codificacion .pcod-unid-fila { display:flex; gap:16px; flex-wrap:wrap; margin-top:6px; }
+#panel-codificacion .pcod-unid-fila input { width:110px; border:1px solid var(--border); border-radius:4px; padding:4px 8px; font-size:11px; font-family:inherit; background:var(--surface); color:var(--text); }
+@media (max-width:1100px) { #panel-codificacion .pcod-unid-fila input { min-height:44px; font-size:14px; } }

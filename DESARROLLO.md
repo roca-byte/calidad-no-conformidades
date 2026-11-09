@@ -28,6 +28,15 @@ HTML + CSS + JavaScript vanilla, sin build ni dependencias de Node.
 ├── tests/
 │   ├── reglas.test.js  # Pruebas de las reglas (Node)
 │   └── e2e.js          # Recorrido completo en Chromium (Playwright)
+├── docs/
+│   ├── GUIA.md         # Guía para usuarios, con capturas
+│   ├── img/            # Capturas y demo.gif (las genera tools/demo.js)
+│   └── video/          # Video de demostración (lo genera tools/video.js)
+├── tools/
+│   ├── ejemplo.js      # Datos de ejemplo INVENTADOS para la guía y el video
+│   ├── servidor.js     # Servidor local para los scripts
+│   ├── demo.js         # Capturas de la guía y GIF
+│   └── video.js        # Video de demostración
 └── IDEAS.md            # Ideas pendientes
 ```
 
@@ -62,6 +71,10 @@ const BRAND = {
   plazoDias: 5   // días hábiles para el plazo de reproceso automático
 };
 ```
+
+Las unidades del registro (cantidad y embalaje) se eligen en **⚙️ Configuración** y se guardan
+en `localStorage['nc_unidades.v1']`; sin elegir, son litros y pallets (`Reglas.unidades`). Los
+datos internos siguen llamándose `litNC`, `litTot` y `pallets` para no romper respaldos viejos.
 
 Los tipos de desvío (con su gravedad sugerida) se arman desde la app (**⚙️ Configuración**) y se
 guardan en `localStorage['nc_tipos.v1']`. Los ejemplos por rubro están en `EJEMPLOS` de
@@ -103,6 +116,21 @@ actualizar esta función y su prueba.
 node --test tests/                 # reglas
 node tests/e2e.js [carpeta]        # navegador real; carpeta opcional para capturas y PDF
 ```
+
+## Guía, GIF y video
+
+Con Node y Playwright (sin `package.json`: Playwright global) y ffmpeg:
+
+```bash
+. ~/.nvm/nvm.sh; export NODE_PATH=$(npm root -g)
+npx playwright install chromium   # una sola vez
+node tools/demo.js                # docs/img/*.png y docs/img/demo.gif
+node tools/video.js               # docs/video/calidad-no-conformidades-demo.mp4
+```
+
+Los scripts cargan en el navegador los datos de `tools/ejemplo.js` (inventados: "Planta Demo",
+lotes L-04xx) con el reloj fijo en el 11/11/2026. La app en sí arranca vacía. Volver a
+generarlos cada vez que cambie algo visible y revisar que la guía siga diciendo lo que la app hace.
 
 ## Mantenimiento
 

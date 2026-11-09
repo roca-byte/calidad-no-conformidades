@@ -78,6 +78,7 @@ async function abrir(browser, BASE, movil, antes) {
   ok(await page.inputValue('#tBody tr td.c10 input') === '2026-11-16', 'y el plazo de 5 días hábiles');
   await page.fill('#tBody tr td.c2 input', 'L-2310');
   await page.fill('#tBody tr td.c3 input', 'Jugo 1 L');
+  await page.fill('#tBody tr td.c3b input', 'Almacén Central');
   await page.selectOption('#tBody tr td.c4 select', 'Envase dañado');
   ok(await page.inputValue('#tBody tr td.c5 select') === 'Moderado', 'el tipo sugiere la gravedad');
   await page.fill('#tBody tr td.c6 input', '12 envases <abollados> & "sucios"');
@@ -92,6 +93,8 @@ async function abrir(browser, BASE, movil, antes) {
   await page.click('#btn-pegar-ok');
   await page.waitForTimeout(700);
   ok(await page.locator('#tBody tr').count() === 3, 'quedan 3 NC en el mes');
+  ok((await page.locator('#tBody td.c3b input').evaluateAll(is => is.map(i => i.value))).filter(v => v === 'Cliente Uno').length === 2,
+    'el cliente pegado de QualityOS se ve en su columna');
   await page.click('#btn-pegar');
   await page.fill('#in-pegar', COPIADO);
   ok((await page.textContent('#pegar-resumen')).includes('0 NC nueva(s) · 2 ya estaban'), 'pegar dos veces no duplica');
@@ -158,6 +161,23 @@ async function abrir(browser, BASE, movil, antes) {
   await foto('06-configuracion', page);
   await page.click('#btn-cod');
 
+  // Unidades del registro: otra empresa mide en kg y embala en cajas
+  await page.click('#btn-cod');
+  await page.fill('#in-u-cantidad', 'kg');
+  await page.fill('#in-u-embalaje', 'Cajas');
+  await page.press('#in-u-embalaje', 'Tab');
+  await page.waitForFunction(() => document.getElementById('th-embalaje').textContent === 'Cajas NC');
+  ok((await page.textContent('#kpi2-label')).includes('Tasa kg NC') && (await page.textContent('#th-cant-nc')) === 'kg NC',
+    'las unidades cambian el indicador y las columnas');
+  await page.reload();
+  await page.waitForSelector('#tBody tr');
+  ok((await page.textContent('#th-cant-tot')) === 'kg Tot.', 'las unidades quedan guardadas');
+  await page.click('#btn-cod');
+  await page.fill('#in-u-cantidad', 'L');
+  await page.fill('#in-u-embalaje', 'Pallets');
+  await page.press('#in-u-embalaje', 'Tab');
+  await page.click('#btn-cod');
+
   const [xls] = await Promise.all([page.waitForEvent('download'), page.click('#btn-excel')]);
   ok(xls.suggestedFilename() === 'Registro_NC_Noviembre_2026.xlsx', 'el Excel lleva el nombre del mes');
 
@@ -165,6 +185,7 @@ async function abrir(browser, BASE, movil, antes) {
   await page.evaluate(() => prepararImpresion());
   ok((await page.textContent('#periodo-val')) === 'Noviembre 2026', 'la hoja impresa muestra el mes elegido');
   ok((await page.textContent('#print-acciones')).includes('Inspector de Calidad'), 'firma como Inspector de Calidad');
+  ok(await page.isVisible('th.c3b'), 'la columna Cliente se imprime');
   if (CAPTURAS) await page.pdf({ path: path.join(CAPTURAS, 'registro.pdf'), format: 'A4', landscape: true, printBackground: true });
   await page.emulateMedia({ media: 'screen' });
 

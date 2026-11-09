@@ -61,7 +61,7 @@
       <div class="kpi-sub">eventos registrados</div>
     </div>
     <div class="kpi-card" id="kpi2-card">
-      <div class="kpi-label">AQ-IND-02 · Tasa litros NC</div>
+      <div class="kpi-label" id="kpi2-label">AQ-IND-02 · Tasa litros NC</div>
       <div class="kpi-val" id="kpi2">—</div>
       <div class="kpi-sub">meta: &lt; 5%</div>
     </div>
@@ -127,6 +127,14 @@
       </div>
     </div>
     <div class="pcod-hint">El nombre y el logo se usan en el encabezado impreso. Si cargás un logo, reemplaza al nombre.</div>
+    <div class="pcod-unidades">
+      <div class="pcod-label">Unidades del registro</div>
+      <div class="pcod-hint">Con qué se mide lo no conforme (para la tasa del indicador) y en qué se embala.</div>
+      <div class="pcod-unid-fila">
+        <label class="pcod-label">Cantidad en <input type="text" id="in-u-cantidad" placeholder="L" maxlength="20" autocomplete="off"></label>
+        <label class="pcod-label">Embalaje <input type="text" id="in-u-embalaje" placeholder="Pallets" maxlength="20" autocomplete="off"></label>
+      </div>
+    </div>
     <div class="pcod-tipos">
       <div class="pcod-label">Tipos de desvío y gravedad sugerida</div>
       <div class="pcod-hint">Cada empresa define los suyos. Al elegir un tipo en una NC, la gravedad se completa sola (se puede cambiar).</div>
@@ -150,17 +158,18 @@
         <th class="c1">Fecha<br>Detección</th>
         <th class="c2">N° Lote</th>
         <th class="c3">Producto</th>
+        <th class="c3b">Cliente</th>
         <th class="c4">Tipo de Desvío<br><span class="kpi-tag">AQ-IND-03</span></th>
         <th class="c5">Gravedad</th>
         <th class="c5b">Detección<br><span class="kpi-tag">EXCEL</span></th>
         <th class="c6">Descripción de la NC</th>
-        <th class="c7">L. NC<br><span class="kpi-tag">AQ-IND-02</span></th>
-        <th class="c8">L. Tot.<br><span class="kpi-tag">AQ-IND-02</span></th>
+        <th class="c7"><span id="th-cant-nc">L NC</span><br><span class="kpi-tag">AQ-IND-02</span></th>
+        <th class="c8"><span id="th-cant-tot">L Tot.</span><br><span class="kpi-tag">AQ-IND-02</span></th>
         <th class="c9">Acción Correctiva /<br>Disposición</th>
         <th class="c10">Plazo<br>Reproceso<br><span class="kpi-tag">AQ-IND-04</span></th>
         <th class="c11">Estado<br><span class="kpi-tag">AQ-IND-01/04</span></th>
         <th class="c12">Fecha<br>Cierre<br><span class="kpi-tag">AQ-IND-04</span></th>
-        <th class="c13">Pallets<br>NC</th>
+        <th class="c13" id="th-embalaje">Pallets NC</th>
         <th class="c14">Responsable<br><span class="kpi-tag">ISO 10.2.2</span></th>
         <th class="c15">Verif. Efic.<br><span class="kpi-tag">ISO 10.2.2</span></th>
       </tr>

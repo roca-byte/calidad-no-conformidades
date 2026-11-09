@@ -152,8 +152,28 @@ const Reglas = (() => {
     return { lineas, filas };
   }
 
+  // ── Unidades del registro ──
+  // Antes eran fijas para envasado (litros y pallets). Cada empresa elige las suyas; si no eligió,
+  // quedan las de siempre, así a quien ya la usaba no le cambia nada.
+  function unidades(guardadas) {
+    const u = guardadas || {};
+    const limpio = (v, def) => String(v || '').trim().slice(0, 20) || def;
+    return { cantidad: limpio(u.cantidad, 'L'), embalaje: limpio(u.embalaje, 'Pallets') };
+  }
+  // Textos que dependen de las unidades (pantalla, impresión y Excel).
+  function textosUnidades(u) {
+    const litros = u.cantidad === 'L';
+    return {
+      kpi: litros ? 'Tasa litros NC' : 'Tasa ' + u.cantidad + ' NC',
+      colNC: u.cantidad + ' NC', colTot: u.cantidad + ' Tot.',
+      etqNC: (litros ? 'Litros' : 'Cantidad (' + u.cantidad + ')') + ' NC',
+      etqTot: (litros ? 'Litros' : 'Cantidad (' + u.cantidad + ')') + ' totales del lote',
+      embalaje: u.embalaje + ' NC'
+    };
+  }
+
   return {
-    SEVS, MESES, EJEMPLOS, hoy, isoToDMY, fmtDate, toISO, sumarHabiles,
+    SEVS, MESES, unidades, textosUnidades, EJEMPLOS, hoy, isoToDMY, fmtDate, toISO, sumarHabiles,
     mesDe, nombreMes, meses, abierta, filtrar, firma, tieneContenido, kpis,
     ejemplo, normalizarTipos, tiposIniciales, sevSugerida, nombreControl, leerDesviosQualityOS
   };
