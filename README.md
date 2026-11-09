@@ -2,93 +2,66 @@
 
 [![QualityOS](https://img.shields.io/badge/QualityOS-calidad_en_planta-0f5c6e?style=flat-square)](https://github.com/roca-byte)
 
-Registro mensual de No Conformidades (NC) para Aseguramiento de Calidad. Es una PWA que funciona **100 % offline**, sin servidor ni backend: los datos quedan en el propio dispositivo (IndexedDB). Es una réplica local del `registro_nc` de QualityOS.
+App para llevar el **registro mensual de No Conformidades (NC)** del área de Calidad:
+una planilla con todas las NC del mes, sus acciones correctivas e indicadores al día.
+Funciona en la compu, la tablet o el celular, y **sin conexión**.
 
-**App publicada:** https://roca-byte.github.io/calidad-no-conformidades/
+**Abrir la app:** https://roca-byte.github.io/calidad-no-conformidades/
 
-## Características
+## Para qué sirve
 
-- **Registro tipo planilla**: una fila por NC (fecha, lote, cliente, producto, tipo de desvío, severidad, detección, descripción, litros NC / totales, acción correctiva, plazo, estado, cierre, pallets, responsable y eficacia).
-- **Severidad sugerida** automáticamente según el tipo de desvío (Leve / Moderado / Crítico).
-- **Plazo automático** de reproceso en días hábiles (configurable; no pisa un plazo cargado a mano).
-- **Estados**: Pendiente, En proceso, Finalizado y Anulado. **Eficacia**: Pendiente, Eficaz, No eficaz.
-- **Indicadores (KPIs)** en tiempo real:
-  - AQ-IND-01: NC activas
-  - AQ-IND-02: litros NC / litros totales (%)
-  - AQ-IND-03: desvío más frecuente
-  - AQ-IND-04: % de reprocesos finalizados dentro de plazo
-  - Contadores por severidad
-- **Imprimir / PDF** con encabezado de empresa, código y versión del registro, más una segunda hoja con las acciones.
-- **Empresa y logo configurables** desde el panel **⚙️ Codificación**: se guardan en el dispositivo y se usan en las dos hojas de impresión (si hay logo, reemplaza al nombre).
-- **Descargar Excel** (.xlsx) del período.
-- **Backup manual** en `.json` (exportar/importar). También importa fichas de la Fase 1.
+Reemplaza el Excel de No Conformidades: cargás cada NC en una fila, la app sugiere la
+severidad y el plazo, calcula los indicadores sola y te deja el registro listo para imprimir
+o pasar a Excel.
+
+## Qué podés hacer
+
+- **Una fila por NC**: fecha, lote, cliente, producto, tipo de desvío, severidad, cómo se
+  detectó, descripción, litros no conformes y totales, acción correctiva, plazo, estado,
+  fecha de cierre, pallets, responsable y verificación de eficacia.
+- **Severidad sugerida** según el tipo de desvío (Leve, Moderado o Crítico).
+- **Plazo automático** de reproceso en días hábiles (si cargás uno a mano, la app no lo cambia).
+- **Estados**: Pendiente, En proceso, Finalizado y Anulado. **Eficacia**: Pendiente, Eficaz
+  o No eficaz.
+- **Indicadores** que se actualizan solos:
+  - NC activas
+  - Porcentaje de litros no conformes sobre el total
+  - Desvío más frecuente
+  - Porcentaje de reprocesos terminados dentro del plazo
+  - Cantidad de NC por severidad
+- **Imprimir o guardar como PDF**, con el encabezado de tu empresa, el código y la versión del
+  registro, más una segunda hoja con las acciones.
+- **Descargar a Excel** las NC del período.
 - **Quitar duplicados** y **borrar todo**.
-- **Tema claro/oscuro** y diseño responsive (tarjetas en celular y tablet).
-- **Instalable** en el celular/PC y usable sin conexión gracias al service worker.
+- **Nombre y logo de tu empresa** en las hojas impresas (botón **⚙️ Codificación**).
+- **Modo claro u oscuro** y diseño que se adapta al celular (las filas se ven como tarjetas).
 
-## Tecnologías
+## Cómo se usa
 
-HTML + CSS + JavaScript vanilla, sin build ni dependencias de Node.
-Única librería incluida: [SheetJS](https://sheetjs.com/) (`vendor/xlsx.full.min.js`) para el Excel.
+1. La primera vez, tocá **⚙️ Codificación** y cargá el nombre de la empresa y el logo (opcional).
+2. Tocá **+ Agregar fila** y completá los datos de la NC. Se guarda sola.
+3. Actualizá el estado, el cierre y la eficacia a medida que avanza cada NC.
+4. Para entregar el registro: **🖨 Imprimir / PDF** o **⬇ Descargar Excel**.
 
-## Estructura
+## Instalarla
 
-```
-├── index.html          # Interfaz
-├── style.css           # Estilos (incluye impresión y tema)
-├── brand.js            # Datos de empresa y codificación del registro
-├── manifest.json       # Configuración PWA
-├── sw.js               # Service worker (caché offline)
-├── js/
-│   ├── app.js          # Lógica de la app, KPIs, impresión, Excel
-│   ├── db.js           # Capa de datos (IndexedDB)
-│   ├── marca.js        # Empresa y logo configurables (Marca)
-│   └── backup.js       # Exportar/importar backup .json
-├── vendor/
-│   └── xlsx.full.min.js
-└── IDEAS.md            # Ideas pendientes
-```
+1. Abrí el link de la app.
+2. **Android (Chrome):** menú ⋮ → *Instalar app* (o *Agregar a la pantalla principal*).
+   **iPhone (Safari):** botón Compartir → *Agregar a inicio*.
+   **Compu (Chrome o Edge):** ícono de instalar en la barra de direcciones.
+3. Listo: después de abrirla una vez, funciona sin señal.
 
-## Uso
+## Tus datos
 
-Al ser estática, alcanza con servirla por HTTP (el service worker no funciona con `file://`):
+- Todo lo que cargás queda **solo en tu dispositivo**. No hay cuentas ni servidor.
+- Si borrás los datos del navegador o cambiás de equipo, se pierden. Usá **💾 Exportar
+  backup** cada tanto para guardar una copia y **⬆ Importar backup** para recuperarla.
 
-```bash
-# desde la carpeta del proyecto
-python3 -m http.server 8000
-```
+## Licencia
 
-Abrir `http://localhost:8000` y, si se quiere, instalarla desde el navegador ("Instalar app" / "Agregar a pantalla de inicio").
+Libre para usar, copiar y modificar ([MIT](LICENSE)). © 2026 Maximiliano Roca.
 
-También se puede publicar en cualquier hosting estático (GitHub Pages, Netlify, etc.).
+---
 
-## Configuración
-
-La empresa y el logo se cargan desde la app, en el panel **⚙️ Codificación**. Quedan guardados solo en el dispositivo y se usan en las dos hojas de impresión: si hay logo, se muestra el logo; si no, el nombre de la empresa.
-
-Los valores de `brand.js` quedan como respaldo cuando la configuración está vacía:
-
-```js
-const BRAND = {
-  empresa: 'Empresa S.A.',
-  codigo: 'SGC-RNC-01',
-  version: '02',
-  area: 'Aseg. Calidad',
-  elaboro: '...',
-  aprobo: '',
-  proceso: '...',
-  plazoDias: 5   // días hábiles para el plazo de reproceso automático
-};
-```
-
-La lista de tipos de desvío (con su severidad sugerida) está en `TIPOS`, dentro de `js/app.js`.
-
-> **Importante:** al modificar cualquier archivo, subí el número `V` en `sw.js` para que los dispositivos descarguen la versión nueva.
-
-## Datos y respaldo
-
-Todo se guarda localmente en IndexedDB (`calidad_nc_v1`, store `filas`). Si se borran los datos del navegador o se cambia de dispositivo, **se pierde la información**: usá **💾 Exportar backup** con regularidad y **Importar** para restaurar.
-
-## Ideas a futuro
-
-Ver [IDEAS.md](IDEAS.md): fotos por NC, mejora de texto con IA, tipos de desvío configurables y puente con REG-01 por archivo.
+Parte de la suite [**QualityOS**](https://github.com/roca-byte) · Información técnica para
+modificarla: [DESARROLLO.md](DESARROLLO.md)
