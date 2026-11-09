@@ -79,3 +79,12 @@ test('duplicados: misma firma sin importar mayúsculas ni espacios', () => {
   assert.equal(R.firma({ lote: 'L1 ', prod: 'A' }), R.firma({ lote: 'l1', prod: 'a' }));
   assert.equal(R.tieneContenido({ fecha: '2026-11-01' }), false);
 });
+
+test('unidades del registro: litros y pallets si no se eligieron otras', () => {
+  assert.deepEqual(R.unidades(null), { cantidad: 'L', embalaje: 'Pallets' });
+  assert.deepEqual(R.unidades({ cantidad: ' kg ', embalaje: '' }), { cantidad: 'kg', embalaje: 'Pallets' });
+  assert.equal(R.textosUnidades(R.unidades(null)).kpi, 'Tasa litros NC', 'a quien ya la usaba no le cambia el indicador');
+  const t = R.textosUnidades({ cantidad: 'kg', embalaje: 'Cajas' });
+  assert.deepEqual([t.kpi, t.colNC, t.colTot, t.embalaje], ['Tasa kg NC', 'kg NC', 'kg Tot.', 'Cajas NC']);
+  assert.equal(t.etqNC, 'Cantidad (kg) NC');
+});

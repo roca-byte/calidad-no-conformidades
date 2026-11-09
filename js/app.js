@@ -29,6 +29,20 @@ let filtro = mesActual();
 let visibles = [];   // índices de rows que se muestran, en orden de carga
 const enVista = () => visibles.map(i => rows[i]);
 
+// ── Unidades del registro (litros y pallets salvo que la empresa elija otras) ──
+const KEY_UNIDADES = 'nc_unidades.v1';
+let unidades = Reglas.unidades((() => { try { return JSON.parse(localStorage.getItem(KEY_UNIDADES)); } catch (e) { return null; } })());
+function guardarUnidades() { try { localStorage.setItem(KEY_UNIDADES, JSON.stringify(unidades)); } catch (e) { toast('⚠ No se pudieron guardar las unidades.'); } }
+function pintarUnidades() {
+  const t = Reglas.textosUnidades(unidades);
+  $('kpi2-label').textContent = 'AQ-IND-02 · ' + t.kpi;
+  $('th-cant-nc').textContent = t.colNC;
+  $('th-cant-tot').textContent = t.colTot;
+  $('th-embalaje').textContent = t.embalaje;
+  if (document.activeElement !== $('in-u-cantidad')) $('in-u-cantidad').value = unidades.cantidad;
+  if (document.activeElement !== $('in-u-embalaje')) $('in-u-embalaje').value = unidades.embalaje;
+}
+
 // ── Tipos de desvío (configurables, guardados en el dispositivo) ──
 const KEY_TIPOS = 'nc_tipos.v1';
 let tipos = null;   // se completa en iniciar(), cuando ya se leyeron las NC
@@ -194,6 +208,7 @@ function render() {
     tr.querySelector('td.c1 input').addEventListener('change', () => { if (Reglas.mesDe(r, mesActual()) !== filtro && filtro !== 'abiertas') { filtro = Reglas.mesDe(r, mesActual()); renderConScroll(); toast('La NC pasó a ' + Reglas.nombreMes(filtro)); } });
     mkInp(tr, 'c2', 'text', r.lote, v => { r.lote = v; marcar(i); }, 'N° Lote');
     mkInp(tr, 'c3', 'text', r.prod, v => { r.prod = v; marcar(i); }, 'Producto');
+    mkInp(tr, 'c3b', 'text', r.cliente, v => { r.cliente = v; marcar(i); }, 'Cliente');
 
     const tdT = mkTdEl(tr, 'c4', 'Tipo de desvío');
     tdT.dataset.val = r.tipo || '';
@@ -216,8 +231,9 @@ function render() {
     tdD.appendChild(mkSelect(DETEC.map(s => ({ v: s, l: s || '—' })), r.detec, e => { r.detec = e.target.value; tdD.dataset.detec = r.detec; marcar(i); }));
 
     mkInp(tr, 'c6', 'text', r.desc, v => { r.desc = v; marcar(i); }, 'Descripción');
-    mkInp(tr, 'c7', 'number', r.litNC, v => { r.litNC = v; marcar(i); updateKPIs(); }, 'Litros NC');
-    mkInp(tr, 'c8', 'number', r.litTot, v => { r.litTot = v; marcar(i); updateKPIs(); }, 'Litros totales del lote');
+    const tu = Reglas.textosUnidades(unidades);
+    mkInp(tr, 'c7', 'number', r.litNC, v => { r.litNC = v; marcar(i); updateKPIs(); }, tu.etqNC);
+    mkInp(tr, 'c8', 'number', r.litTot, v => { r.litTot = v; marcar(i); updateKPIs(); }, tu.etqTot);
     mkInp(tr, 'c9', 'text', r.ac, v => { r.ac = v; marcar(i); }, 'Acción correctiva / disposición');
     mkInp(tr, 'c10', 'date', r.plazo, v => { r.plazo = v; marcar(i); updateKPIs(); }, 'Plazo reproceso');
 
@@ -227,7 +243,7 @@ function render() {
     badge(tdE, r.est, BADGES, 'b-pend');
 
     mkInp(tr, 'c12', 'date', r.cierre, v => { r.cierre = v; marcar(i); updateKPIs(); }, 'Fecha cierre');
-    mkInp(tr, 'c13', 'number', r.pallets, v => { r.pallets = v; marcar(i); }, 'Pallets NC');
+    mkInp(tr, 'c13', 'number', r.pallets, v => { r.pallets = v; marcar(i); }, tu.embalaje);
     mkInp(tr, 'c14', 'text', r.resp, v => { r.resp = v; marcar(i); }, 'Responsable');
 
     const tdF = mkTdEl(tr, 'c15', 'Verif. eficacia (ISO 10.2.2)');
@@ -417,8 +433,8 @@ function exportarExcel() {
   if (!filas.length) { toast('⚠ No hay datos para exportar.'); return; }
   const datos = [[
     '#', 'Fecha Detección', 'N° Lote', 'Producto', 'Cliente', 'Tipo de Desvío', 'Gravedad', 'Detección',
-    'Descripción NC', 'Litros NC', 'Litros Tot. Lote', 'Acción Correctiva', 'Plazo Reproceso', 'Estado',
-    'Fecha Cierre', 'Pallets NC', 'HH estimadas (min)', 'Responsable', 'Verif. Eficacia'
+    'Descripción NC', 'Cantidad NC (' + unidades.cantidad + ')', 'Cantidad Tot. Lote (' + unidades.cantidad + ')', 'Acción Correctiva', 'Plazo Reproceso', 'Estado',
+    'Fecha Cierre', unidades.embalaje + ' NC', 'HH estimadas (min)', 'Responsable', 'Verif. Eficacia'
   ]];
   filas.forEach(({ r, n }) => {
     const pallets = parseInt(r.pallets) || 0;
@@ -568,6 +584,10 @@ $('in-pegar').addEventListener('input', leerPegado);
 $('btn-pegar-ok').addEventListener('click', agregarPegadas);
 $('btn-pegar-cancelar').addEventListener('click', () => { $('panel-pegar').hidden = true; });
 $('btn-tipo-add').addEventListener('click', agregarTipo);
+['in-u-cantidad', 'in-u-embalaje'].forEach(id => $(id).addEventListener('change', () => {
+  unidades = Reglas.unidades({ cantidad: $('in-u-cantidad').value, embalaje: $('in-u-embalaje').value });
+  guardarUnidades(); pintarUnidades(); renderConScroll();
+}));
 $('sel-ejemplo').innerHTML += Object.keys(Reglas.EJEMPLOS).map(n => `<option>${esc(n)}</option>`).join('');
 $('sel-ejemplo').addEventListener('change', cargarEjemplo);
 // Empresa y logo: se guardan en el dispositivo y se aplican a las impresiones.
@@ -608,6 +628,7 @@ async function iniciar() {
   tipos = leerTipos();
   if (!tipos) { tipos = Reglas.tiposIniciales(rows); guardarTipos(); }
   pintarTipos();
+  pintarUnidades();
   render();
   // Pedir al navegador que no borre los datos si falta espacio
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
