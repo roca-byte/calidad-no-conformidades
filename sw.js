@@ -1,6 +1,6 @@
 // Service worker: cachea la app para que funcione offline durante el turno.
 // Al cambiar cualquier archivo, subí V para que el celular baje la versión nueva.
-const V = 13;
+const V = 14;
 const CACHE = 'nc_v' + V;
 const FILES = [
   './', './index.html', './style.css', './manifest.json', './brand.js',
@@ -19,9 +19,14 @@ self.addEventListener('install', e => {
   );
 });
 self.addEventListener('activate', e => {
+  // Las apps de la suite comparten dominio (roca-byte.github.io) y por eso comparten las cachés:
+  // se borran SOLO las versiones viejas de esta app. Antes se borraba todo lo que no fuera la
+  // versión actual, y al instalar o actualizar otra app de la suite esta dejaba de abrir sin señal.
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys
+        .filter(k => k.startsWith('nc_v') && k !== CACHE)
+        .map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
